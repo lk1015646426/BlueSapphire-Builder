@@ -3,7 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using BlueSapphire.Builder; // 引用 AppConfig
+using System.Text.RegularExpressions; // [新增]
+using BlueSapphire.Builder;
 
 namespace BlueSapphire.Builder.Services
 {
@@ -34,7 +35,17 @@ namespace BlueSapphire.Builder.Services
             ReportProgress(20);
 
             if (Directory.Exists(config.RawOutputDir))
-                Directory.Delete(config.RawOutputDir, true);
+            {
+                try
+                {
+                    Directory.Delete(config.RawOutputDir, true);
+                }
+                catch (IOException)
+                {
+                    // 忽略占用错误，尝试继续或提示
+                    SendLog("⚠️ 警告: 无法清理旧目录，文件可能被占用。", true);
+                }
+            }
 
             // WinUI 3 必须指定 Platform=x64
             var publishArgs = $"publish \"{config.ProjectPath}\" -c Release -r win-x64 --self-contained true -o \"{config.RawOutputDir}\" /p:Version={config.Version} /p:Platform=x64";
@@ -54,27 +65,27 @@ namespace BlueSapphire.Builder.Services
                 SendLog(">>> [2/2] 正在构建安装包...", false);
 
                 string? projDir = Path.GetDirectoryName(config.ProjectPath);
-                string issPath = Path.Combine(projDir!, "installer.iss");
+
+                string issPath = config.IssScriptPath;
+                if (string.IsNullOrWhiteSpace(issPath))
+                {
+                    issPath = Path.Combine(projDir!, "installer.iss");
+                    SendLog($"未指定 ISS 脚本，尝试默认路径: {issPath}");
+                }
 
                 if (!File.Exists(issPath))
                     throw new FileNotFoundException($"找不到安装脚本模板：{issPath}");
 
-                // 🔥【核心新增】自动搬运汉化文件
-                // 从 Builder 的运行目录 -> 复制到 -> BlueSapphire 项目目录
+                // 自动搬运汉化文件
                 string sourceIsl = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Chinese.isl");
-                string targetIsl = Path.Combine(projDir!, "Chinese.isl");
+                string targetIsl = Path.Combine(Path.GetDirectoryName(issPath)!, "Chinese.isl");
 
                 if (File.Exists(sourceIsl))
                 {
-                    File.Copy(sourceIsl, targetIsl, true); // true = 覆盖已存在的文件
+                    try { File.Copy(sourceIsl, targetIsl, true); } catch { }
                     SendLog($"已自动部署汉化文件: {targetIsl}");
                 }
-                else
-                {
-                    SendLog("⚠️ 警告: 在 Builder 目录下未找到 Chinese.isl，打包可能缺少汉化。", true);
-                }
 
-                // 组装参数
                 var isccArgs = $"/dSourcePath=\"{config.RawOutputDir}\" " +
                                $"/dMyAppName=\"{config.AppName}\" " +
                                $"/dMyAppVersion=\"{config.Version}\" " +
@@ -112,8 +123,9 @@ namespace BlueSapphire.Builder.Services
                 EnableRaisingEvents = true
             };
 
-            process.OutputDataReceived += (s, e) => { if (e.Data != null) SendLog(e.Data); };
-            process.ErrorDataReceived += (s, e) => { if (e.Data != null) SendLog("ERROR: " + e.Data, true); };
+            // 🔥 修复：在这里调用 CleanAnsi 清洗乱码
+            process.OutputDataReceived += (s, e) => { if (e.Data != null) SendLog(CleanAnsi(e.Data)); };
+            process.ErrorDataReceived += (s, e) => { if (e.Data != null) SendLog("ERROR: " + CleanAnsi(e.Data), true); };
 
             process.Exited += (s, e) =>
             {
@@ -131,5 +143,15 @@ namespace BlueSapphire.Builder.Services
 
         private void SendLog(string msg, bool isError = false) => LogReceived?.Invoke(this, new LogEventArgs(msg, isError));
         private void ReportProgress(double value) => ProgressChanged?.Invoke(this, value);
+
+      
+
+        // 修改后：允许输入 null (string?)，并确保返回非空字符串
+        private static string CleanAnsi(string? input)
+        {
+            if (string.IsNullOrEmpty(input)) return string.Empty; // 如果是 null，返回空字符串
+                                                                  // 正则表达式清洗 ANSI 转义序列
+            return Regex.Replace(input, @"\x1B\[[^@-~]*[@-~]", string.Empty);
+        }
     }
 }

@@ -15,6 +15,9 @@ namespace BlueSapphire.Builder
         // Inno Setup 编译器路径
         public string? InnoSetupPath { get; set; }
 
+        // [新增] 自定义安装脚本路径 (.iss)
+        public string? IssScriptPath { get; set; }
+
         // 是否生成安装包
         public bool MakeInstaller { get; set; } = true;
     }
