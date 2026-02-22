@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions; // [新增]
+using System.Text.RegularExpressions;
 using BlueSapphire.Builder;
 
 namespace BlueSapphire.Builder.Services
@@ -30,6 +30,43 @@ namespace BlueSapphire.Builder.Services
             if (!File.Exists(config.ProjectPath)) throw new FileNotFoundException("找不到项目文件 (.csproj)");
             if (string.IsNullOrWhiteSpace(config.RawOutputDir)) throw new ArgumentException("未设置原始输出目录");
 
+            // ====================================================================
+            // [正规军做法：编译前数据装填]
+            // 在 dotnet publish 开始之前，把数据同步到源码的 Assets 目录下。
+            // 配合 .csproj 里的 <Content> 声明，编译器会自动把它带进安装包。
+            // ====================================================================
+            SendLog(">>> [0/2] 正在同步跃迁记录数据 (DevMatrixLog.json)...", false);
+            ReportProgress(5);
+            try
+            {
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string sourceLogPath = Path.Combine(localAppData, "BlueSapphire", "DevMatrixLog.json");
+
+                if (File.Exists(sourceLogPath))
+                {
+                    string projDir = Path.GetDirectoryName(config.ProjectPath)!;
+                    string targetAssetsDir = Path.Combine(projDir, "Assets");
+
+                    if (!Directory.Exists(targetAssetsDir))
+                    {
+                        Directory.CreateDirectory(targetAssetsDir);
+                    }
+
+                    string targetLogPath = Path.Combine(targetAssetsDir, "DevMatrixLog.json");
+                    File.Copy(sourceLogPath, targetLogPath, true);
+                    SendLog($"✅ 成功注入开发日志到项目资源: {targetLogPath}");
+                }
+                else
+                {
+                    SendLog($"⚠️ 警告: 未在本地找到开发日志，本次发布的程序将无内置更新记录。", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                SendLog($"❌ 同步开发日志失败: {ex.Message}", true);
+            }
+            // ====================================================================
+
             // 2. 编译阶段 (.NET Publish)
             SendLog(">>> [1/2] 正在编译 .NET 核心...", false);
             ReportProgress(20);
@@ -42,15 +79,12 @@ namespace BlueSapphire.Builder.Services
                 }
                 catch (IOException)
                 {
-                    // 忽略占用错误，尝试继续或提示
                     SendLog("⚠️ 警告: 无法清理旧目录，文件可能被占用。", true);
                 }
             }
 
-            // WinUI 3 必须指定 Platform=x64
             var publishArgs = $"publish \"{config.ProjectPath}\" -c Release -r win-x64 --self-contained true -o \"{config.RawOutputDir}\" /p:Version={config.Version} /p:Platform=x64";
 
-            // 使用 UTF8 调用 dotnet
             await RunCommandAsync("dotnet", publishArgs, Encoding.UTF8);
 
             SendLog(">>> 编译成功！原始文件已生成。", false);
@@ -76,7 +110,6 @@ namespace BlueSapphire.Builder.Services
                 if (!File.Exists(issPath))
                     throw new FileNotFoundException($"找不到安装脚本模板：{issPath}");
 
-                // 自动搬运汉化文件
                 string sourceIsl = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Chinese.isl");
                 string targetIsl = Path.Combine(Path.GetDirectoryName(issPath)!, "Chinese.isl");
 
@@ -95,7 +128,6 @@ namespace BlueSapphire.Builder.Services
                                $"/F\"{config.AppName}_Setup_v{config.Version}\" " +
                                $"\"{issPath}\"";
 
-                // 使用 GB2312 调用 Inno Setup
                 await RunCommandAsync(config.InnoSetupPath, isccArgs, Encoding.GetEncoding("GB2312"));
 
                 SendLog(">>> 安装包制作完成！", false);
@@ -123,7 +155,6 @@ namespace BlueSapphire.Builder.Services
                 EnableRaisingEvents = true
             };
 
-            // 🔥 修复：在这里调用 CleanAnsi 清洗乱码
             process.OutputDataReceived += (s, e) => { if (e.Data != null) SendLog(CleanAnsi(e.Data)); };
             process.ErrorDataReceived += (s, e) => { if (e.Data != null) SendLog("ERROR: " + CleanAnsi(e.Data), true); };
 
@@ -144,13 +175,9 @@ namespace BlueSapphire.Builder.Services
         private void SendLog(string msg, bool isError = false) => LogReceived?.Invoke(this, new LogEventArgs(msg, isError));
         private void ReportProgress(double value) => ProgressChanged?.Invoke(this, value);
 
-      
-
-        // 修改后：允许输入 null (string?)，并确保返回非空字符串
         private static string CleanAnsi(string? input)
         {
-            if (string.IsNullOrEmpty(input)) return string.Empty; // 如果是 null，返回空字符串
-                                                                  // 正则表达式清洗 ANSI 转义序列
+            if (string.IsNullOrEmpty(input)) return string.Empty;
             return Regex.Replace(input, @"\x1B\[[^@-~]*[@-~]", string.Empty);
         }
     }
