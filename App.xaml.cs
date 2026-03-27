@@ -2,12 +2,12 @@
 
 namespace BlueSapphire.Builder
 {
-    public partial class App : System.Windows.Application
+    public partial class App : Application
     {
-        public App()
+        protected override void OnStartup(StartupEventArgs e)
         {
-            // 🔥 关键修复：注册编码提供程序
-            // 这样 .NET 8 才能识别 "GB2312" 这种老式编码，否则会报错
+            base.OnStartup(e);
+            // ✅ 极客修复：注册系统代码页，完美支持 GB2312/GBK，彻底根除 InnoSetup 和 Cmd 乱码
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
         }
     }

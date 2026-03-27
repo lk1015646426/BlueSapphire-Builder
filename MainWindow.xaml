@@ -226,7 +226,7 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <ProgressBar Height="4" Value="{Binding ProgressValue}" Maximum="100" 
+                            <ProgressBar x:Name="MainProgressBar" Height="4" Value="{Binding ProgressValue}" Maximum="100" 
                                          BorderThickness="0" Background="#1E293B" Foreground="{StaticResource NeonBlueBrush}">
                                 <ProgressBar.Effect>
                                     <DropShadowEffect Color="#00F0FF" BlurRadius="5" ShadowDepth="0"/>
@@ -239,7 +239,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="{Binding ProgressText}" FontSize="12" FontFamily="Consolas" Foreground="{StaticResource NeonBlueBrush}"/>
-                                <TextBlock Grid.Column="1" Text="{Binding ProgressValue, StringFormat={}{0}%}" FontSize="12" Foreground="{StaticResource TechGreyBrush}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ProgressValue, StringFormat={}{0:0}%}" FontSize="12" Foreground="{StaticResource TechGreyBrush}"/>
                             </Grid>
                         </Grid>
                     </StackPanel>
@@ -282,10 +282,10 @@
                             </Grid>
                         </Border>
 
-                        <TextBox x:Name="TxtLog" Grid.Row="1" Margin="8"
-                                 Style="{StaticResource ConsoleStyle}"
-                                 Foreground="#00FF41"
-                                 VerticalScrollBarVisibility="Auto"/>
+                        <RichTextBox x:Name="TxtLog" Grid.Row="1" Margin="8" Background="Transparent" BorderThickness="0"
+                                     FontFamily="Consolas" FontSize="12" Foreground="#00FF41" 
+                                     VerticalScrollBarVisibility="Auto" IsReadOnly="True" 
+                                     Block.LineHeight="4" />
                     </Grid>
                 </Border>
             </Grid>
