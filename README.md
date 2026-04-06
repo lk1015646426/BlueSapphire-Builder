@@ -8,6 +8,19 @@ BlueSapphire-Builder 是 BlueSapphire 的配套发布工具，用来把本地构
 
 它不是通用 IDE，也不是面向最终用户的程序，而是面向打包环境的构建前端。
 
+## 版本信息
+
+- 当前文档版本：`1.0.4`
+- 当前定位：`BlueSapphire` 专用发布工具
+- 当前发布目标：`win-x64 self-contained` 安装包
+
+### 1.0.4 更新摘要
+
+- Builder 已切换为 `publish-only` 打包模式
+- `RawOutputDir` 已迁移为 `PublishOutputDir`
+- 构建前校验与日志输出已补齐
+- `Chinese.isl` 已更新到 Inno Setup 6 可用版本
+
 ## 当前定位
 
 - 只服务于 `BlueSapphire` 的正式发布
@@ -141,7 +154,7 @@ BlueSapphire-Builder/
 
 ## 截图展示
 
-当前 README 先保留正式的截图章节结构，后续建议把 Builder 主界面截图放到 `docs/screenshots/`，例如：
+当前仓库已经预留正式截图目录：
 
 - `docs/screenshots/main-window.png`
 - `docs/screenshots/build-success.png`
@@ -159,6 +172,7 @@ BlueSapphire-Builder/
 如果你给 Builder 单独发布版本，建议统一放到 GitHub Releases：
 
 - 下载地址：[BlueSapphire-Builder Releases](https://github.com/lk1015646426/BlueSapphire-Builder/releases)
+- 建议发布标签：`v1.0.4`
 
 如果当前还没有单独发布安装包，也可以直接源码运行：
 
@@ -195,3 +209,15 @@ Builder 只用于打包环境，因此下载或构建后请在具备以下条件
 ### 5. 目标用户电脑也需要安装 `.NET SDK` 和 `Inno Setup` 吗？
 
 不需要。`.NET SDK` 和 `Inno Setup` 只属于打包环境依赖，不属于最终用户运行 BlueSapphire 的前置条件。
+
+## 已知限制
+
+- Builder 仍依赖本机已安装的 `Inno Setup 6`
+- README 截图目录已经预留，但正式主界面截图仍需后续替换进 `docs/screenshots/`
+- Builder 的目标是发布环境，不是面向最终用户的安装程序
+
+## 后续路线
+
+- 继续收口 Builder 的路径探测与日志体验
+- 继续优化与 GitHub Release 的联动体验
+- 在正式发布前补入最终版界面截图
