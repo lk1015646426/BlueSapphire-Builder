@@ -159,13 +159,16 @@ BlueSapphire-Builder/
 - `docs/screenshots/main-window.png`
 - `docs/screenshots/build-success.png`
 
-推荐展示内容：
+当前主界面图如下：
 
-- 主窗口的项目配置区
-- 构建日志区
-- 成功生成安装包后的完成状态
+### 主界面
 
-这样可以把 Builder 的使用路径一次讲清，而不必依赖额外文档。
+![BlueSapphire Builder Main Window](docs/screenshots/main-window.png)
+
+补充说明：
+
+- `docs/screenshots/build-success.png` 已保留在仓库中，后续可以替换成最终版构建成功截图
+- 推荐最终展示内容仍然是：项目配置区、构建日志区、构建完成状态
 
 ## 安装包下载说明
 
