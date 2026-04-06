@@ -165,14 +165,14 @@
                             <Rectangle Height="1" Fill="#1E293B" Margin="0,5,0,20"/>
 
                             <StackPanel Margin="0,0,0,15">
-                                <TextBlock Text="[A] 编译产物输出 (Raw Output)" Style="{StaticResource LabelText}" Foreground="{StaticResource NeonBlueBrush}"/>
+                                <TextBlock Text="[A] 发布产物目录 (Publish Output)" Style="{StaticResource LabelText}" Foreground="{StaticResource NeonBlueBrush}"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="8"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox Text="{Binding RawOutputDir}" IsReadOnly="True"/>
+                                    <TextBox Text="{Binding PublishOutputDir}" IsReadOnly="True"/>
                                     <Button Grid.Column="2" Content="选择目录" Click="BtnBrowseRaw_Click" 
                                             Style="{StaticResource OutlineButton}" Padding="15,0" Height="36"/>
                                 </Grid>

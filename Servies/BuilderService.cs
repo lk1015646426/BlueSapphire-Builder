@@ -1,10 +1,10 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Text.RegularExpressions;
-using BlueSapphire.Builder;
 
 namespace BlueSapphire.Builder.Services
 {
@@ -12,6 +12,7 @@ namespace BlueSapphire.Builder.Services
     {
         public string Message { get; }
         public bool IsError { get; }
+
         public LogEventArgs(string message, bool isError = false)
         {
             Message = message;
@@ -21,100 +22,95 @@ namespace BlueSapphire.Builder.Services
 
     public class BuilderService
     {
+        private static readonly string[] ForbiddenPublishEntries =
+        {
+            "BlueSapphire.Tests",
+            "TestData",
+            ".git",
+            "obj"
+        };
+
         public event EventHandler<LogEventArgs>? LogReceived;
         public event EventHandler<double>? ProgressChanged;
 
         public async Task BuildAsync(AppConfig config)
         {
-            if (!File.Exists(config.ProjectPath)) throw new FileNotFoundException("找不到项目文件 (.csproj)");
-            if (string.IsNullOrWhiteSpace(config.RawOutputDir)) throw new ArgumentException("未设置原始输出目录");
+            ArgumentNullException.ThrowIfNull(config);
+            config.Normalize();
 
-            SendLog(">>> [0/2] 正在同步跃迁记录数据 (DevMatrixLog.json)...", false);
+            string projectPath = RequireExistingFile(config.ProjectPath, "找不到项目文件 (.csproj)");
+            string projectDirectory = Path.GetDirectoryName(projectPath) ?? throw new InvalidOperationException("无法解析项目目录。");
+            string appName = RequireValue(config.AppName, "未设置应用名称");
+            string version = RequireValue(config.Version, "未设置版本号");
+            string publisher = RequireValue(config.Publisher, "未设置发布组织/公司");
+            string appId = RequireValue(config.AppID, "未设置应用唯一识别码");
+            string publishOutputDir = RequireDirectoryPath(config.PublishOutputDir, "未设置发布产物目录");
+            string setupOutputDir = RequireDirectoryPath(config.SetupOutputDir, "未设置安装包输出目录");
+            string issPath = ResolveIssScriptPath(config.IssScriptPath, projectDirectory);
+
+            ValidatePublishOutputDirectory(projectDirectory, publishOutputDir);
+
+            string? innoSetupPath = null;
+            if (config.MakeInstaller)
+            {
+                ValidateOutputDirectory(projectDirectory, setupOutputDir, "安装包输出目录");
+                innoSetupPath = RequireExistingFile(config.InnoSetupPath, "Inno Setup 路径未配置，无法生成安装包。");
+            }
+
+            SendLog($">>> ProjectPath: {projectPath}");
+            SendLog($">>> PublishOutputDir: {publishOutputDir}");
+            SendLog($">>> IssScriptPath: {issPath}");
+            SendLog($">>> SetupOutputDir: {setupOutputDir}");
+            if (config.MakeInstaller)
+            {
+                SendLog($">>> InnoSetupPath: {innoSetupPath}");
+            }
+
+            PrepareOutputDirectory(publishOutputDir);
+
+            SendLog(">>> [1/2] 正在编译 .NET 核心...");
             ReportProgress(5);
-            // ...(中间的复制开发日志的 try-catch 逻辑保持不变)...
 
-            SendLog(">>> [1/2] 正在编译 .NET 核心...", false);
+            string publishArgs =
+                $"publish \"{projectPath}\" -c Release -r win-x64 --self-contained true " +
+                $"-p:WindowsPackageType=None -p:Version={version} -p:Platform=x64 -o \"{publishOutputDir}\"";
 
-            // 清理旧目录逻辑保持不变...
+            await RunCommandAsync("dotnet", publishArgs, Encoding.UTF8, 5.0, 50.0);
 
-            var publishArgs = $"publish \"{config.ProjectPath}\" -c Release -r win-x64 --self-contained true -o \"{config.RawOutputDir}\" /p:Version={config.Version} /p:Platform=x64";
-
-            // ✅ 极客优化：将 dotnet 编译进度映射到 5% ~ 50%，强制使用 GBK 编码读取
-            await RunCommandAsync("dotnet", publishArgs, System.Text.Encoding.UTF8, 5.0, 50.0);
-
-            SendLog(">>> 编译成功！原始文件已生成。", false);
+            ValidatePublishedArtifacts(publishOutputDir, appName);
+            SendLog(">>> 编译成功！发布产物已生成。");
 
             if (config.MakeInstaller)
             {
-                // ... (中间的 Inno Setup 路径检查逻辑保持不变) ...
+                PrepareOutputDirectory(setupOutputDir);
+                SendLog(">>> [2/2] 正在编译安装包...");
 
-                // ✅ 消除警告1：使用 ?? "" 确保 issPath 绝对不会是 null
-                string issPath = config.IssScriptPath ?? "";
+                string installerBaseName = $"{appName}_Setup_v{version}";
+                string isccArgs =
+                    $"/dSourcePath=\"{publishOutputDir}\" " +
+                    $"/dMyAppName=\"{appName}\" " +
+                    $"/dMyAppVersion=\"{version}\" " +
+                    $"/dMyAppPublisher=\"{publisher}\" " +
+                    $"/dMyAppId=\"{appId}\" " +
+                    $"/O\"{setupOutputDir}\" " +
+                    $"/F\"{installerBaseName}\" " +
+                    $"\"{issPath}\"";
 
-                // 如果界面上没选 iss 文件（留空了），就自动拼接项目根目录下的 installer.iss
-                if (string.IsNullOrWhiteSpace(issPath) && !string.IsNullOrWhiteSpace(config.ProjectPath))
+                await RunCommandAsync(innoSetupPath!, isccArgs, Encoding.UTF8, 50.0, 99.0);
+
+                string installerPath = Path.Combine(setupOutputDir, installerBaseName + ".exe");
+                if (!File.Exists(installerPath))
                 {
-                    // Path.GetDirectoryName 可能返回 null，加上判空保护
-                    string? projDir = System.IO.Path.GetDirectoryName(config.ProjectPath);
-                    if (projDir != null) // ✅ 消除警告2：确保 projDir 不为 null 后再组合路径
-                    {
-                        issPath = System.IO.Path.Combine(projDir, "installer.iss");
-                    }
+                    throw new FileNotFoundException("安装包生成失败，未找到目标安装包。", installerPath);
                 }
 
-                var isccArgs = $"/dSourcePath=\"{config.RawOutputDir}\" " +
-                               $"/dMyAppName=\"{config.AppName}\" " +
-                               $"/dMyAppVersion=\"{config.Version}\" " +
-                               $"/dMyAppPublisher=\"{config.Publisher}\" " +
-                               $"/dMyAppId=\"{config.AppID}\" " +
-                               $"/O\"{config.SetupOutputDir}\" " +
-                               $"/F\"{config.AppName}_Setup_v{config.Version}\" " +
-                               $"\"{issPath}\"";
-
-                // ✅ 消除警告3：提前拦截 null 值，防止传入 RunCommandAsync
-                if (string.IsNullOrWhiteSpace(config.InnoSetupPath))
-                {
-                    throw new Exception("Inno Setup 路径未配置，无法生成安装包！请在界面中指定 ISCC.exe 的位置。");
-                }
-
-                // ✅ 极客优化：使用 ! 操作符告诉编译器，这里 InnoSetupPath 绝对不可能为 null 了
-                await RunCommandAsync(config.InnoSetupPath!, isccArgs, System.Text.Encoding.UTF8, 50.0, 99.0);
-
-                SendLog(">>> 安装包制作完成！", false);
-            }
-            {
-                // ... (中间的 Inno Setup 路径检查逻辑保持不变) ...
-
-                // ✅ 修复：在这里补上 issPath 的定义和获取逻辑
-                string issPath = config.IssScriptPath;
-
-                // 如果界面上没选 iss 文件（留空了），就自动拼接项目根目录下的 installer.iss
-                if (string.IsNullOrWhiteSpace(issPath) && !string.IsNullOrWhiteSpace(config.ProjectPath))
-                {
-                    string projDir = System.IO.Path.GetDirectoryName(config.ProjectPath);
-                    issPath = System.IO.Path.Combine(projDir, "installer.iss");
-                }
-
-                var isccArgs = $"/dSourcePath=\"{config.RawOutputDir}\" " +
-                               $"/dMyAppName=\"{config.AppName}\" " +
-                               $"/dMyAppVersion=\"{config.Version}\" " +
-                               $"/dMyAppPublisher=\"{config.Publisher}\" " +
-                               $"/dMyAppId=\"{config.AppID}\" " +
-                               $"/O\"{config.SetupOutputDir}\" " +
-                               $"/F\"{config.AppName}_Setup_v{config.Version}\" " +
-                               $"\"{issPath}\"";
-
-                // ✅ 极客优化：将 Inno Setup 打包进度映射到 50% ~ 99%
-                await RunCommandAsync(config.InnoSetupPath, isccArgs, System.Text.Encoding.UTF8, 50.0, 99.0);
-
-                SendLog(">>> 安装包制作完成！", false);
+                SendLog(">>> 安装包制作完成！");
             }
 
             ReportProgress(100);
         }
 
-        // ✅ 核心重构：支持平滑进度计算的底层命令执行器
-        private async Task RunCommandAsync(string fileName, string arguments, System.Text.Encoding encoding, double startProgress, double endProgress)
+        private async Task RunCommandAsync(string fileName, string arguments, Encoding encoding, double startProgress, double endProgress)
         {
             var psi = new ProcessStartInfo
             {
@@ -129,31 +125,26 @@ namespace BlueSapphire.Builder.Services
             };
 
             using var process = new Process { StartInfo = psi };
-
             double currentProgress = startProgress;
 
-            process.OutputDataReceived += (sender, e) =>
+            process.OutputDataReceived += (_, e) =>
             {
-                if (!string.IsNullOrEmpty(e.Data))
+                if (string.IsNullOrWhiteSpace(e.Data))
                 {
-                    // 1. 发送日志到前端
-                    LogReceived?.Invoke(this, new LogEventArgs(e.Data, false));
-
-                    // 2. 核心魔法：芝诺的乌龟（永远达不到终点的平滑算法）
-                    // 每次输出一行日志，进度条就前进【剩余空间的 3%】
-                    // 这样一开始跑得快，越往后越慢，但【绝对不会卡死】，也【绝对不会倒退】
-                    double remaining = endProgress - currentProgress;
-                    currentProgress += remaining * 0.03;
-
-                    ProgressChanged?.Invoke(this, currentProgress);
+                    return;
                 }
+
+                SendLog(e.Data);
+                double remaining = endProgress - currentProgress;
+                currentProgress += remaining * 0.03;
+                ReportProgress(currentProgress);
             };
 
-            process.ErrorDataReceived += (sender, e) =>
+            process.ErrorDataReceived += (_, e) =>
             {
-                if (!string.IsNullOrEmpty(e.Data))
+                if (!string.IsNullOrWhiteSpace(e.Data))
                 {
-                    LogReceived?.Invoke(this, new LogEventArgs(e.Data, true));
+                    SendLog(e.Data, true);
                 }
             };
 
@@ -168,17 +159,140 @@ namespace BlueSapphire.Builder.Services
                 throw new Exception($"命令执行失败，退出代码：{process.ExitCode}");
             }
 
-            // 命令真正执行完毕时，才把进度实打实地推到当前阶段的终点 (比如 50% 或 99%)
-            ProgressChanged?.Invoke(this, endProgress);
+            ReportProgress(endProgress);
         }
 
-        private void SendLog(string msg, bool isError = false) => LogReceived?.Invoke(this, new LogEventArgs(msg, isError));
-        private void ReportProgress(double value) => ProgressChanged?.Invoke(this, value);
-
-        private static string CleanAnsi(string? input)
+        private static string ResolveIssScriptPath(string? issScriptPath, string projectDirectory)
         {
-            if (string.IsNullOrEmpty(input)) return string.Empty;
-            return Regex.Replace(input, @"\x1B\[[^@-~]*[@-~]", string.Empty);
+            string resolvedPath = string.IsNullOrWhiteSpace(issScriptPath)
+                ? Path.Combine(projectDirectory, "installer.iss")
+                : issScriptPath;
+
+            return RequireExistingFile(resolvedPath, "找不到安装脚本 (.iss)");
         }
+
+        private static void ValidatePublishOutputDirectory(string projectDirectory, string publishOutputDir)
+        {
+            ValidateOutputDirectory(projectDirectory, publishOutputDir, "发布产物目录");
+
+            if (PathsEqual(projectDirectory, publishOutputDir))
+            {
+                throw new InvalidOperationException("发布产物目录不能直接指向项目根目录。");
+            }
+
+            string normalizedPath = EnsureTrailingSeparator(Path.GetFullPath(publishOutputDir)).ToLowerInvariant();
+            if (normalizedPath.Contains(@"\bin\debug\"))
+            {
+                throw new InvalidOperationException("发布产物目录不能指向 Debug 输出目录。");
+            }
+        }
+
+        private static void ValidateOutputDirectory(string projectDirectory, string outputDirectory, string displayName)
+        {
+            string fullPath = Path.GetFullPath(outputDirectory);
+            string rootPath = Path.GetPathRoot(fullPath) ?? string.Empty;
+            if (PathsEqual(fullPath, rootPath))
+            {
+                throw new InvalidOperationException($"{displayName}不能直接指向磁盘根目录。");
+            }
+
+            if (PathsEqual(fullPath, projectDirectory))
+            {
+                throw new InvalidOperationException($"{displayName}不能直接指向项目根目录。");
+            }
+        }
+
+        private static void ValidatePublishedArtifacts(string publishOutputDir, string appName)
+        {
+            string appExecutable = Path.Combine(publishOutputDir, appName + ".exe");
+            if (!File.Exists(appExecutable))
+            {
+                throw new FileNotFoundException("发布产物目录中未找到应用程序主文件。", appExecutable);
+            }
+
+            foreach (string entryName in ForbiddenPublishEntries)
+            {
+                string path = Path.Combine(publishOutputDir, entryName);
+                if (Directory.Exists(path) || File.Exists(path))
+                {
+                    throw new InvalidOperationException($"发布产物目录中检测到不应打包的内容: {entryName}");
+                }
+            }
+
+            if (File.Exists(Path.Combine(publishOutputDir, "BlueSapphire.csproj")))
+            {
+                throw new InvalidOperationException("发布产物目录中检测到项目源码文件，路径配置错误。");
+            }
+        }
+
+        private static void PrepareOutputDirectory(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                foreach (string entry in Directory.EnumerateFileSystemEntries(path))
+                {
+                    string fullPath = Path.GetFullPath(entry);
+                    var attributes = File.GetAttributes(fullPath);
+                    if (attributes.HasFlag(FileAttributes.Directory))
+                    {
+                        Directory.Delete(fullPath, true);
+                    }
+                    else
+                    {
+                        File.Delete(fullPath);
+                    }
+                }
+            }
+            else
+            {
+                Directory.CreateDirectory(path);
+            }
+        }
+
+        private static string RequireExistingFile(string? path, string errorMessage)
+        {
+            string fullPath = RequireValue(path, errorMessage);
+            fullPath = Path.GetFullPath(fullPath);
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException(errorMessage, fullPath);
+            }
+
+            return fullPath;
+        }
+
+        private static string RequireDirectoryPath(string? path, string errorMessage)
+        {
+            string fullPath = RequireValue(path, errorMessage);
+            return Path.GetFullPath(fullPath);
+        }
+
+        private static string RequireValue(string? value, string errorMessage)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new ArgumentException(errorMessage);
+            }
+
+            return value.Trim();
+        }
+
+        private static bool PathsEqual(string left, string right)
+        {
+            string normalizedLeft = Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string normalizedRight = Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            return string.Equals(normalizedLeft, normalizedRight, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string EnsureTrailingSeparator(string path)
+        {
+            return path.EndsWith(Path.DirectorySeparatorChar)
+                ? path
+                : path + Path.DirectorySeparatorChar;
+        }
+
+        private void SendLog(string message, bool isError = false) => LogReceived?.Invoke(this, new LogEventArgs(message, isError));
+        private void ReportProgress(double value) => ProgressChanged?.Invoke(this, value);
     }
 }

@@ -113,10 +113,11 @@ namespace BlueSapphire.Builder
                 // 构建成功后强制推满进度条
                 _targetProgress = 100;
 
-                MessageBox.Show($"构建成功！\n输出目录: {currentConfig.SetupOutputDir}", "恭喜");
-                if (currentConfig.MakeInstaller && Directory.Exists(currentConfig.SetupOutputDir))
+                string outputPath = currentConfig.MakeInstaller ? currentConfig.SetupOutputDir! : currentConfig.PublishOutputDir!;
+                MessageBox.Show($"构建成功！\n输出目录: {outputPath}", "恭喜");
+                if (Directory.Exists(outputPath))
                 {
-                    Process.Start("explorer.exe", currentConfig.SetupOutputDir!);
+                    Process.Start("explorer.exe", outputPath);
                 }
             }
             catch (Exception ex)
@@ -172,7 +173,7 @@ namespace BlueSapphire.Builder
             {
                 _viewModel.ProjectPath = dialog.FileName;
                 string projDir = Path.GetDirectoryName(dialog.FileName)!;
-                _viewModel.RawOutputDir = Path.Combine(projDir, "bin", "Publish");
+                _viewModel.PublishOutputDir = Path.Combine(projDir, "bin", "Publish");
                 _viewModel.SetupOutputDir = Path.Combine(projDir, "bin", "Installer");
 
                 if (string.IsNullOrWhiteSpace(_viewModel.AppName) || _viewModel.AppName == "BlueSapphire")
@@ -182,7 +183,7 @@ namespace BlueSapphire.Builder
             }
         }
 
-        private void BtnBrowseRaw_Click(object sender, RoutedEventArgs e) => _viewModel.RawOutputDir = PickFolder(_viewModel.RawOutputDir) ?? _viewModel.RawOutputDir;
+        private void BtnBrowseRaw_Click(object sender, RoutedEventArgs e) => _viewModel.PublishOutputDir = PickFolder(_viewModel.PublishOutputDir) ?? _viewModel.PublishOutputDir;
         private void BtnBrowseSetup_Click(object sender, RoutedEventArgs e) => _viewModel.SetupOutputDir = PickFolder(_viewModel.SetupOutputDir) ?? _viewModel.SetupOutputDir;
         private void BtnGenID_Click(object sender, RoutedEventArgs e) => _viewModel.AppID = "{{" + Guid.NewGuid().ToString().ToUpper() + "}";
 
