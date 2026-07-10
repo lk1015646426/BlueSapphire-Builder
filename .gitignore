@@ -361,3 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Runtime state
+builder_config_v5.json
+builder_progress_history_v1.json
+android_icon_manifest_state_v1.json
+
+# 临时验证构建目录
+_verify_build/

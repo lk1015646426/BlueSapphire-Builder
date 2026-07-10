@@ -1,15 +1,17 @@
-﻿<Window x:Class="BlueSapphire.Builder.MainWindow"
+<Window x:Class="BlueSapphire.Builder.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:BlueSapphire.Builder.ViewModels"
+        xmlns:ctrl="clr-namespace:BlueSapphire.Builder.Controls"
         mc:Ignorable="d"
-        Title="Blue Sapphire Cyber" Height="850" Width="1100"
+        Title="Blue Sapphire Cyber" Height="760" Width="1280"
+        MinWidth="1024" MinHeight="680"
         WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome GlassFrameThickness="1" CornerRadius="0" CaptionHeight="40"/>
+        <WindowChrome GlassFrameThickness="1" CornerRadius="8" CaptionHeight="40"/>
     </WindowChrome.WindowChrome>
 
     <d:Window.DataContext>
@@ -28,9 +30,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-
             <Border Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="1" Background="#1E293B"/>
-
             <StackPanel Orientation="Horizontal" Margin="15,0,0,0" VerticalAlignment="Center">
                 <Viewbox Width="16" Height="16" Margin="0,0,10,0">
                     <Path Data="{StaticResource Icon_Diamond}" Fill="{StaticResource NeonBlueBrush}">
@@ -42,7 +42,6 @@
                 <TextBlock Text="BLUE SAPPHIRE" FontSize="14" FontWeight="Bold" Foreground="#FFF" VerticalAlignment="Center"/>
                 <TextBlock Text=" // CYBER BUILDER" FontSize="12" Foreground="{StaticResource NeonBlueBrush}" VerticalAlignment="Center" Margin="5,0,0,0" Opacity="0.8"/>
             </StackPanel>
-
             <StackPanel Grid.Column="2" Orientation="Horizontal">
                 <Button Style="{StaticResource WindowButtonStyle}" Click="BtnMin_Click">
                     <Path Data="{StaticResource Icon_Minimize}" Width="10" Height="10" Fill="{StaticResource TextBrush}" Stretch="Uniform"/>
@@ -53,240 +52,365 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="25,20,25,25">
+        <Grid Grid.Row="1" Margin="20,15,20,20">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*"/>
-                <ColumnDefinition Width="25"/>
-                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="340"/>
             </Grid.ColumnDefinitions>
 
-            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Hidden" PanningMode="VerticalOnly">
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                <DockPanel LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Top" Text="打包预设 [PRESETS]" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+                    <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="删除" Click="BtnDeletePreset_Click" Style="{StaticResource OutlineButton}" Padding="12,7" MinWidth="0"/>
+                        <Button Grid.Column="2" Content="另存为" Click="BtnSavePresetAs_Click" Style="{StaticResource OutlineButton}" Padding="12,7" MinWidth="0"/>
+                    </Grid>
+                    <ListBox x:Name="PresetListBox" ItemsSource="{Binding PresetNames}" SelectedItem="{Binding SelectedPresetName}"
+                            Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.Resources>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                            </Style>
+                        </ListBox.Resources>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" ToolTip="{Binding}" Padding="8,6,8,6" FontSize="12.5" Foreground="{StaticResource TextBrush}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="bd" Background="Transparent" BorderThickness="0" CornerRadius="8" Padding="0">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#142447"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="#0B2C4D"/>
+                                                    <Setter TargetName="bd" Property="BorderBrush" Value="#22D3EE"/>
+                                                    <Setter TargetName="bd" Property="BorderThickness" Value="1"/>
+                                                    <Setter Property="Foreground" Value="#22D3EE"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
-
-                    <Border Style="{StaticResource CardStyle}">
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-                                <Viewbox Width="18" Height="18" Margin="0,0,10,0">
-                                    <Path Data="{StaticResource Icon_Info}" Fill="{StaticResource NeonBlueBrush}"/>
-                                </Viewbox>
-                                <TextBlock Text="核心元数据 [CORE DATA]" Style="{StaticResource SectionHeader}"/>
-                            </StackPanel>
-
-                            <Grid Margin="0,0,0,20">
+                            <TextBlock Text="目标平台 [TARGET MODE]" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+                            <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="2*"/>
-                                    <ColumnDefinition Width="20"/>
-                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Click="BtnSelectWindowsMode_Click" Style="{StaticResource ModeSwitchButtonStyle}" Tag="Windows" Height="76" ToolTip="适用于 .NET / Tauri / Electron 等 Windows 桌面应用打包&#x0A;输出格式：EXE 可执行文件或 MSI 安装包">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="🪟  Windows 桌面发布" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center"/>
+                                        <TextBlock Text=".NET / Tauri · EXE / MSI" FontSize="10.5" Opacity="0.7" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                                        <TextBlock Text="需要 .csproj 或自定义构建命令" FontSize="9.5" Opacity="0.5" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="2" Click="BtnSelectAndroidMode_Click" Style="{StaticResource ModeSwitchButtonStyle}" Tag="Android" Height="76" ToolTip="适用于 Android 原生 / Flutter / React Native 等项目打包&#x0A;输出格式：APK 安装包&#x0A;需要 Gradle 构建环境（gradlew.bat）">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="🤖  Android APK" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Gradle · Debug / Release" FontSize="10.5" Opacity="0.7" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                                        <TextBlock Text="需要 Gradle 项目（含 gradlew）" FontSize="9.5" Opacity="0.5" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="程序代号 (Name)" Style="{StaticResource LabelText}"/>
-                                    <TextBox Text="{Binding AppName}" Tag="输入项目名称..."/>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="核心数据 [CORE DATA]" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+                            <Grid Visibility="{Binding IsWindowsTarget, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="8"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Grid.Column="0">
+                                    <TextBlock Text="程序代号 (Name)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                    <TextBox Height="34" Text="{Binding AppName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource {x:Type TextBox}}"/>
                                 </StackPanel>
-
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="编译版本 (Ver)" Style="{StaticResource LabelText}"/>
-                                    <TextBox Text="{Binding Version}" TextAlignment="Center" Foreground="{StaticResource NeonBlueBrush}" FontWeight="Bold"/>
+                                <StackPanel Grid.Row="0" Grid.Column="2" Width="140">
+                                    <TextBlock Text="编译版本 (Ver)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                    <TextBox Height="34" Text="{Binding Version, UpdateSourceTrigger=PropertyChanged}" FontFamily="Cascadia Code, Consolas" Style="{StaticResource {x:Type TextBox}}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="0">
+                                    <TextBlock Text="发布者 (Publisher)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                    <TextBox Height="34" Text="{Binding Publisher, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource {x:Type TextBox}}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="2" Grid.Column="2" Width="140">
+                                    <TextBlock Text="应用标识 (AppID)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Height="34" Text="{Binding AppID, UpdateSourceTrigger=PropertyChanged}" FontFamily="Cascadia Code, Consolas" FontSize="10" Style="{StaticResource {x:Type TextBox}}"/>
+                                        <Button Grid.Column="2" Click="BtnGenID_Click" Content="生成" Width="40" Height="34" FontSize="11" Style="{StaticResource OutlineButton}"/>
+                                    </Grid>
                                 </StackPanel>
                             </Grid>
-
-                            <StackPanel Margin="0,0,0,20">
-                                <TextBlock Text="发布组织 / 公司 (Publisher)" Style="{StaticResource LabelText}"/>
-                                <TextBox Text="{Binding Publisher}"/>
-                            </StackPanel>
-
-                            <StackPanel>
-                                <TextBlock Text="应用唯一识别码 (AppID)" Style="{StaticResource LabelText}"/>
+                            <StackPanel Visibility="{Binding IsAndroidTarget, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="10"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox Text="{Binding AppID}" FontFamily="Consolas" IsReadOnly="True" Background="#050A14" Foreground="#64748B"/>
-                                    <Button Grid.Column="2" Content="生成标识" Click="BtnGenID_Click" 
-                                            Style="{StaticResource OutlineButton}" Padding="15,0" Height="36"/>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="应用名 (Name)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                        <TextBox Height="34" Text="{Binding AppName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource {x:Type TextBox}}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Width="140">
+                                        <TextBlock Text="版本号 (Version)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                        <TextBox Height="34" Text="{Binding Version, UpdateSourceTrigger=PropertyChanged}" FontFamily="Cascadia Code, Consolas" Style="{StaticResource {x:Type TextBox}}"/>
+                                    </StackPanel>
                                 </Grid>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource CardStyle}">
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-                                <Viewbox Width="18" Height="18" Margin="0,0,10,0">
-                                    <Path Data="{StaticResource Icon_Folder}" Fill="{StaticResource NeonBlueBrush}"/>
-                                </Viewbox>
-                                <TextBlock Text="环境配置节点 [ENV CONFIG]" Style="{StaticResource SectionHeader}"/>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,0,0,20">
-                                <TextBlock Text="源项目文件 (.csproj)" Style="{StaticResource LabelText}"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="8"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Text="{Binding ProjectPath}" IsReadOnly="True" Foreground="#64748B"/>
-                                    <Button Grid.Column="2" Content="浏览..." Click="BtnBrowseProject_Click" 
-                                            Style="{StaticResource OutlineButton}" Padding="15,0" Height="36"/>
-                                </Grid>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,0,0,20">
-                                <TextBlock Text="Inno Setup 编译器 (ISCC.exe)" Style="{StaticResource LabelText}"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="8"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Text="{Binding InnoSetupPath}"/>
-                                    <Button Grid.Column="2" Content="浏览..." Click="BtnBrowseInno_Click" 
-                                            Style="{StaticResource OutlineButton}" Padding="15,0" Height="36"/>
-                                </Grid>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,0,0,20">
-                                <TextBlock Text="安装脚本模板 (.iss) [可选]" Style="{StaticResource LabelText}"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="8"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Text="{Binding IssScriptPath}" ToolTip="留空则自动检测" Tag="默认使用项目根目录 installer.iss"/>
-                                    <Button Grid.Column="2" Content="浏览..." Click="BtnBrowseIss_Click" 
-                                            Style="{StaticResource OutlineButton}" Padding="15,0" Height="36"/>
-                                </Grid>
-                            </StackPanel>
-
-                            <Rectangle Height="1" Fill="#1E293B" Margin="0,5,0,20"/>
-
-                            <StackPanel Margin="0,0,0,15">
-                                <TextBlock Text="[A] 发布产物目录 (Publish Output)" Style="{StaticResource LabelText}" Foreground="{StaticResource NeonBlueBrush}"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="8"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Text="{Binding PublishOutputDir}" IsReadOnly="True"/>
-                                    <Button Grid.Column="2" Content="选择目录" Click="BtnBrowseRaw_Click" 
-                                            Style="{StaticResource OutlineButton}" Padding="15,0" Height="36"/>
-                                </Grid>
-                            </StackPanel>
-
-                            <StackPanel>
-                                <TextBlock Text="[B] 最终安装包 (Installer)" Style="{StaticResource LabelText}" Foreground="{StaticResource NeonPurpleBrush}"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="8"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Text="{Binding SetupOutputDir}" IsReadOnly="True"/>
-                                    <Button Grid.Column="2" Content="选择目录" Click="BtnBrowseSetup_Click" 
-                                            Style="{StaticResource OutlineButton}" Padding="15,0" Height="36"/>
-                                </Grid>
-                            </StackPanel>
-
+                            <TextBlock Text="环境配置 [ENV CONFIG]" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+                            <TabControl Background="Transparent" BorderThickness="0" Padding="0">
+                                <TabItem Header=".NET 项目" Visibility="{Binding IsWindowsTarget, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <StackPanel Margin="0,12,0,0">
+                                        <CheckBox Content="使用自定义构建命令（Tauri / Node 等）" IsChecked="{Binding IsWindowsCustomBuild, Mode=OneWay}" IsEnabled="False" Margin="0,0,0,12" FontSize="12" Foreground="{StaticResource TextBrush}"/>
+                                        <StackPanel Visibility="{Binding IsWindowsCustomBuild, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,0,0,12">
+                                            <Border Background="#0B1226" CornerRadius="8" Padding="12,10">
+                                                <StackPanel>
+                                                    <TextBlock Text="[自定义构建]" Foreground="{StaticResource NeonPurpleBrush}" FontSize="11" Margin="0,0,0,8"/>
+                                                    <TextBlock Text="构建命令 (Build Command)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                                    <ctrl:PathPicker x:Name="CustomBuildCmdPicker" Path="{Binding WindowsBuildCommand, Mode=OneWay}" IsFolderPicker="False" Filter="可执行文件|*.exe;*.bat;*.cmd;*.ps1|所有文件|*.*" DialogTitle="选择构建命令" BrowseToolTip="选择构建命令文件" Margin="0,0,0,10" PathChanged="CustomBuildCmdPicker_PathChanged"/>
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="10"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Text="工作目录" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                                            <ctrl:PathPicker x:Name="CustomWorkingDirPicker" Path="{Binding WindowsBuildWorkingDir, Mode=OneWay}" DialogTitle="选择工作目录" BrowseToolTip="选择工作目录" PathChanged="CustomWorkingDirPicker_PathChanged"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2">
+                                                            <TextBlock Text="产物归集目录" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                                            <ctrl:PathPicker x:Name="CustomArtifactDirPicker" Path="{Binding WindowsBuildArtifactDir, Mode=OneWay}" DialogTitle="选择产物归集目录" BrowseToolTip="选择产物归集目录" PathChanged="CustomArtifactDirPicker_PathChanged"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                        <StackPanel Visibility="{Binding IsNotWindowsCustomBuild, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="项目文件 (.csproj)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                            <ctrl:PathPicker x:Name="CsprojPicker" Path="{Binding ProjectPath, Mode=OneWay}" IsFolderPicker="False" Filter="C# 项目|*.csproj" DialogTitle="选择 .csproj 项目文件" BrowseToolTip="选择 .csproj 文件" Margin="0,0,0,12" PathChanged="CsprojPicker_PathChanged"/>
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="Inno Setup 路径 (ISCC.exe)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                                    <ctrl:PathPicker x:Name="InnoPicker" Path="{Binding InnoSetupPath, Mode=OneWay}" IsFolderPicker="False" Filter="Inno Setup 编译器|ISCC.exe" DialogTitle="选择 ISCC.exe" BrowseToolTip="选择 Inno Setup 编译器" PathChanged="InnoPicker_PathChanged"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="安装脚本 (.iss)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                                    <ctrl:PathPicker x:Name="IssPicker" Path="{Binding IssScriptPath, Mode=OneWay}" IsFolderPicker="False" Filter="Inno Setup 脚本|*.iss" DialogTitle="选择 .iss 脚本" BrowseToolTip="选择安装脚本" PathChanged="IssPicker_PathChanged"/>
+                                                </StackPanel>
+                                            </Grid>
+                                            <TextBlock Text="应用图标 (.ico)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                            <ctrl:PathPicker x:Name="WindowsIconPicker" Path="{Binding WindowsIconPath, Mode=OneWay}" IsFolderPicker="False" Filter="图标文件|*.ico" DialogTitle="选择 .ico 图标" BrowseToolTip="选择图标文件" Margin="0,0,0,8" PathChanged="WindowsIconPicker_PathChanged"/>
+                                            <TextBlock Text="{Binding WindowsIconStatus}" FontSize="11" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                                            <Rectangle Height="1" Fill="#1E293B" Margin="0,4,0,12"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="10"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="[A] 编译产物输出" FontSize="11" Foreground="{StaticResource NeonBlueBrush}" Margin="0,0,0,5"/>
+                                                    <ctrl:PathPicker x:Name="RawOutputPicker" Path="{Binding RawOutputDir, Mode=OneWay}" DialogTitle="选择编译产物输出目录" BrowseToolTip="选择编译产物输出目录" PathChanged="RawOutputPicker_PathChanged"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" Visibility="{Binding MakeInstaller, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="[B] 最终安装包" FontSize="11" Foreground="#10B981" Margin="0,0,0,5"/>
+                                                    <ctrl:PathPicker x:Name="SetupOutputPicker" Path="{Binding SetupOutputDir, Mode=OneWay}" DialogTitle="选择安装包输出目录" BrowseToolTip="选择安装包输出目录" PathChanged="SetupOutputPicker_PathChanged"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </TabItem>
+                                <TabItem Header="Android 项目" Visibility="{Binding IsAndroidTarget, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <StackPanel Margin="0,12,0,0">
+                                        <TextBlock Text="Android 项目根目录" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                        <ctrl:PathPicker x:Name="AndroidRootPicker" Path="{Binding AndroidProjectRoot, Mode=OneWay}" DialogTitle="选择 Android 项目根目录" BrowseToolTip="选择包含 gradlew.bat 的项目根目录" Margin="0,0,0,4" PathChanged="AndroidRootPicker_PathChanged"/>
+                                        <TextBlock Text="💡 选择包含 gradlew / build.gradle 的项目根目录，系统将自动识别模块、签名与图标" FontSize="10" Foreground="#64748B" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="10"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="应用模块 (Module)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                                <TextBox Height="34" Text="{Binding AndroidModuleName, UpdateSourceTrigger=PropertyChanged}" FontFamily="Cascadia Code, Consolas" Style="{StaticResource {x:Type TextBox}}" ToolTip="自动检测的模块名，可手动修改（如 app / library / feature等）"/>
+                                                <TextBlock Text="{Binding AndroidDetectedModulesSummary}" FontSize="10.5" Foreground="{StaticResource SubTextBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="构建类型 (Build Type)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="6"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button Grid.Column="0" Click="BtnSelectAndroidDebugMode_Click" Style="{StaticResource ModeSwitchButtonStyle}" Tag="Debug" Padding="12,7" MinWidth="0" Content="Debug"/>
+                                                    <Button Grid.Column="2" Click="BtnSelectAndroidReleaseMode_Click" Style="{StaticResource ModeSwitchButtonStyle}" Tag="Release" Padding="12,7" MinWidth="0" Content="Release"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+                                        <TextBlock Text="签名状态" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                        <TextBlock Text="{Binding AndroidSigningStatus}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{StaticResource SubTextBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AndroidSigningReady}" Value="True">
+                                                            <Setter Property="Foreground" Value="#10B981"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding AndroidSigningReady}" Value="False">
+                                                            <Setter Property="Foreground" Value="#F59E0B"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <Rectangle Height="1" Fill="#1E293B" Margin="0,4,0,12"/>
+                                        <TextBlock Text="APK 输出目录（留空则自动输出到项目 build 目录）" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                        <ctrl:PathPicker x:Name="AndroidApkOutputPicker" Path="{Binding AndroidApkOutputDir, Mode=OneWay}" DialogTitle="选择 APK 输出目录" BrowseToolTip="选择 APK 输出目录（留空则自动）" Margin="0,0,0,8" PathChanged="AndroidApkOutputPicker_PathChanged"/>
+                                        <TextBlock Text="预览：" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,0,0,5"/>
+                                        <Border Background="#0B1226" CornerRadius="8" Padding="10,8">
+                                            <TextBlock Text="{Binding AndroidApkOutputPreview}" FontSize="11" FontFamily="Cascadia Code, Consolas" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap"/>
+                                        </Border>
+                                        <TextBlock Text="应用图标 (.ico)" FontSize="11" Foreground="{StaticResource SubTextBrush}" Margin="0,12,0,5"/>
+                                        <ctrl:PathPicker x:Name="AndroidIconPicker" Path="{Binding AndroidIconPath, Mode=OneWay}" IsFolderPicker="False" Filter="图标文件|*.ico" DialogTitle="选择 Android 启动图标" BrowseToolTip="选择图标文件" Margin="0,0,0,8" PathChanged="AndroidIconPicker_PathChanged"/>
+                                        <TextBlock Text="{Binding AndroidIconStatus}" FontSize="11" Foreground="{StaticResource SubTextBrush}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </TabItem>
+                            </TabControl>
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
 
-            <Grid Grid.Column="2">
+            <Grid Grid.Column="4">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-
-                <Border Grid.Row="0" Style="{StaticResource CardStyle}" BorderBrush="{StaticResource NeonBlueBrush}" BorderThickness="1">
+                <Border Grid.Row="0" Style="{StaticResource CardStyle}">
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
-                            <Viewbox Width="20" Height="20" Margin="0,0,10,0">
-                                <Path Data="{StaticResource Icon_Rocket}" Fill="{StaticResource NeonBlueBrush}"/>
-                            </Viewbox>
-                            <TextBlock Text="编译链路控制 [PIPELINE]" Style="{StaticResource SectionHeader}"/>
-                        </StackPanel>
-
-                        <CheckBox IsChecked="{Binding MakeInstaller}" Content="生成安装程序 (Inno Setup)" 
-                                  Margin="0,0,0,25" FontWeight="Bold" Foreground="#FFF"/>
-
-                        <Button x:Name="BtnBuild" Content="🚀  启动构建序列" 
-                                Height="55" Click="BtnBuild_Click"
-                                Style="{StaticResource HeroButton}"
-                                IsEnabled="{Binding IsNotBuilding}"/>
-
-                        <Grid Margin="0,25,0,0">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <ProgressBar x:Name="MainProgressBar" Height="4" Value="{Binding ProgressValue}" Maximum="100" 
-                                         BorderThickness="0" Background="#1E293B" Foreground="{StaticResource NeonBlueBrush}">
-                                <ProgressBar.Effect>
-                                    <DropShadowEffect Color="#00F0FF" BlurRadius="5" ShadowDepth="0"/>
-                                </ProgressBar.Effect>
-                            </ProgressBar>
-
-                            <Grid Grid.Row="1" Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding ProgressText}" FontSize="12" FontFamily="Consolas" Foreground="{StaticResource NeonBlueBrush}"/>
-                                <TextBlock Grid.Column="1" Text="{Binding ProgressValue, StringFormat={}{0:0}%}" FontSize="12" Foreground="{StaticResource TechGreyBrush}"/>
-                            </Grid>
+                        <TextBlock Text="构建管道 [PIPELINE]" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+                        <CheckBox Content="生成安装包" IsChecked="{Binding MakeInstaller}" Margin="0,0,0,12" FontSize="12" Foreground="{StaticResource TextBrush}" Visibility="{Binding IsWindowsTarget, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <Button Click="BtnBuild_Click" Style="{StaticResource HeroButton}" Height="46" Margin="0,0,0,14">
+                            <TextBlock Text="{Binding BuildButtonText}" FontSize="14" FontWeight="SemiBold"/>
+                        </Button>
+                        <ProgressBar Height="8" Value="{Binding ProgressValue, Mode=OneWay}" Maximum="100" Background="#0B1226" Foreground="#22D3EE" BorderThickness="0"/>
+                        <Grid Margin="0,6,0,0">
+                            <TextBlock Text="{Binding ProgressText}" FontSize="11" Foreground="{StaticResource SubTextBrush}"/>
+                            <TextBlock Text="{Binding ProgressValue, StringFormat={}{0:0.0}%, Mode=OneWay}" FontSize="11" Foreground="#22D3EE" HorizontalAlignment="Right" FontFamily="Cascadia Code, Consolas"/>
                         </Grid>
                     </StackPanel>
                 </Border>
-
-                <Border Grid.Row="1" Background="#000" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="4" Padding="0" Margin="0,0,0,16" ClipToBounds="True">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="34"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <Border Background="#0F172A" BorderBrush="#1E293B" BorderThickness="0,0,0,1">
-                            <Grid Margin="10,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Viewbox Width="12" Height="12" Margin="0,0,8,0">
-                                        <Path Data="{StaticResource Icon_Console}" Fill="{StaticResource TechGreyBrush}"/>
-                                    </Viewbox>
-                                    <TextBlock Text="系统日志流 // SYSTEM LOG" Foreground="{StaticResource TechGreyBrush}" FontSize="11" FontFamily="Consolas" FontWeight="Bold"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Style="{StaticResource ConsoleToolButtonStyle}" Click="BtnCopyLog_Click" ToolTip="复制日志">
-                                        <Viewbox Width="12" Height="12">
-                                            <Path Data="{StaticResource Icon_Copy}" Fill="{StaticResource TechGreyBrush}"/>
-                                        </Viewbox>
-                                    </Button>
-                                    <Button Style="{StaticResource ConsoleToolButtonStyle}" Click="BtnClearLog_Click" ToolTip="清空终端">
-                                        <Viewbox Width="12" Height="12">
-                                            <Path Data="{StaticResource Icon_Trash}" Fill="{StaticResource TechGreyBrush}"/>
-                                        </Viewbox>
-                                    </Button>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <RichTextBox x:Name="TxtLog" Grid.Row="1" Margin="8" Background="Transparent" BorderThickness="0"
-                                     FontFamily="Consolas" FontSize="12" Foreground="#00FF41" 
-                                     VerticalScrollBarVisibility="Auto" IsReadOnly="True" 
-                                     Block.LineHeight="4" />
-                    </Grid>
+                <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                    <DockPanel LastChildFill="True">
+                        <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="系统日志" Style="{StaticResource SectionHeader}"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <StackPanel.Resources>
+                                    <Style TargetType="CheckBox">
+                                        <Setter Property="Margin" Value="6,0,0,0"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Cursor" Value="Hand"/>
+                                        <Setter Property="FontSize" Value="11"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="FontFamily" Value="Cascadia Code, Consolas"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="CheckBox">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Border x:Name="cbBox" Width="13" Height="13" BorderThickness="1"
+                                                                BorderBrush="#22D3EE" Background="Transparent" CornerRadius="3"/>
+                                                        <ContentPresenter Margin="4,0,0,0" VerticalAlignment="Center"
+                                                                          TextBlock.Foreground="{TemplateBinding Foreground}"/>
+                                                    </StackPanel>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="cbBox" Property="BorderBrush" Value="#38BDF8"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsChecked" Value="True">
+                                                            <Setter TargetName="cbBox" Property="Background" Value="#22D3EE"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Opacity" Value="0.4"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </StackPanel.Resources>
+                                <CheckBox x:Name="CbInfo" Content="I" IsChecked="True" Click="FilterCheckBox_Changed" Foreground="#22D3EE" ToolTip="Info 信息"/>
+                                <CheckBox x:Name="CbSuccess" Content="S" IsChecked="True" Click="FilterCheckBox_Changed" Foreground="#00FF41" ToolTip="Success 成功"/>
+                                <CheckBox x:Name="CbWarning" Content="W" IsChecked="True" Click="FilterCheckBox_Changed" Foreground="#FACC15" ToolTip="Warning 警告"/>
+                                <CheckBox x:Name="CbError" Content="E" IsChecked="True" Click="FilterCheckBox_Changed" Foreground="#FF3232" ToolTip="Error 错误"/>
+                            </StackPanel>
+                            <Button Grid.Column="3" Click="BtnCopyLog_Click" Content="复制" Style="{StaticResource ConsoleToolButtonStyle}" Height="24" Width="46"/>
+                            <Button Grid.Column="4" Click="BtnClearLog_Click" Content="清空" Style="{StaticResource ConsoleToolButtonStyle}" Height="24" Width="46"/>
+                        </Grid>
+                        <RichTextBox x:Name="TxtLog" Background="#020408" BorderThickness="0" FontFamily="Cascadia Code, Consolas" FontSize="11" Foreground="#22D3EE" IsReadOnly="True" VerticalScrollBarVisibility="Auto" Block.LineHeight="18"/>
+                    </DockPanel>
                 </Border>
             </Grid>
         </Grid>
