@@ -11,7 +11,8 @@
         WindowStartupLocation="CenterScreen" Background="{StaticResource BackgroundBrush}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome GlassFrameThickness="1" CornerRadius="8" CaptionHeight="40"/>
+        <!-- GlassFrameThickness=0：避免 DWM 合成不可用时 WindowChrome 调用 DwmExtendFrameIntoClientArea 抛 COMException -->
+        <WindowChrome GlassFrameThickness="0" CornerRadius="8" CaptionHeight="40"/>
     </WindowChrome.WindowChrome>
 
     <d:Window.DataContext>

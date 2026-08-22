@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using BlueSapphire.Builder.Helpers;
 
@@ -13,6 +15,11 @@ namespace BlueSapphire.Builder
             base.OnStartup(e);
             // 注册系统代码页，完美支持 GB2312/GBK，彻底根除 InnoSetup 和 Cmd 乱码
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
+            // 打包耗时较长，期间常发生锁屏/睡眠/远程桌面切换，DWM 合成暂停会导致
+            // GPU 渲染线程连环崩溃（crash.log 2026-08-15：0x80263001 → UCEERR_RENDERTHREADFAILURE）。
+            // 本工具 UI 简单，强制软件渲染彻底摆脱 DWM/GPU 依赖，换取无人值守构建的稳定性。
+            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
 
             // 全局异常兜底：UI 线程 / 非 UI 线程 / 未观察 Task 三道防线
             DispatcherUnhandledException += App_DispatcherUnhandledException;

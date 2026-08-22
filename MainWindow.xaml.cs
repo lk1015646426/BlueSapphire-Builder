@@ -1,5 +1,6 @@
 using Microsoft.Win32;
 using System;
+using System.ComponentModel;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -26,6 +27,9 @@ namespace BlueSapphire.Builder
         private double _targetProgress = 0;
         private double _currentDisplayProgress = 0;
         private DispatcherTimer _smoothTimer = new DispatcherTimer();
+
+        // 配置自动保存定时器：字段变更后防抖写盘，防止关窗被强杀/崩溃导致配置丢失
+        private readonly DispatcherTimer _configSaveTimer = new DispatcherTimer();
 
         // 日志最大保留行数，避免长时间构建累积过多内存
         private const int MaxLogLines = 2000;
@@ -77,6 +81,15 @@ namespace BlueSapphire.Builder
                 }
             };
             _smoothTimer.Start();
+
+            // 配置防抖自动保存：任何配置字段变更后 800ms 写盘一次，无需依赖「干净关窗」
+            _configSaveTimer.Interval = TimeSpan.FromMilliseconds(800);
+            _configSaveTimer.Tick += (s, e) =>
+            {
+                _configSaveTimer.Stop();
+                SaveConfig();
+            };
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             _builderService.ProgressChanged += (s, val) => Dispatcher.BeginInvoke(() => {
                 // 🛡️ 强制保障锁：进度只能前进，绝对不允许倒退哪怕 0.1%！
@@ -131,7 +144,18 @@ namespace BlueSapphire.Builder
             _viewModel.RefreshMetadata();
         }
 
-        private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            _configSaveTimer.Stop();
+            // 持久化失败不应阻断窗口关闭
+            SaveConfig();
+        }
+
+        /// <summary>
+        /// 将当前 ViewModel 配置原子写入 %APPDATA%\BlueSapphire.Builder\builder_config.json。
+        /// 任何配置字段变更都会经防抖定时器调用；构建开始前与关窗时也会显式调用，确保配置不丢失。
+        /// </summary>
+        private void SaveConfig()
         {
             try
             {
@@ -142,14 +166,33 @@ namespace BlueSapphire.Builder
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                // 持久化失败不应阻断窗口关闭
                 AppendLog($"[配置保存提示] {ConfigFileName} 保存失败：{ex.Message}", true);
             }
+        }
+
+        /// <summary>
+        /// ViewModel 字段变更后触发防抖自动保存；跳过高频进度类属性，避免构建过程中无谓写盘。
+        /// </summary>
+        private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MainViewModel.ProgressValue) ||
+                e.PropertyName == nameof(MainViewModel.ProgressText) ||
+                e.PropertyName == nameof(MainViewModel.IsBuilding))
+            {
+                return;
+            }
+
+            _configSaveTimer.Stop();
+            _configSaveTimer.Start();
         }
 
         private async void BtnBuild_Click(object sender, RoutedEventArgs e)
         {
             TxtLog.Document.Blocks.Clear();
+
+            // 先持久化当前配置，确保即使构建失败/程序异常退出，下次启动也能恢复本次配置
+            SaveConfig();
+            AppendLog(">>> [配置] 当前配置已保存，下次启动自动恢复。", LogLevel.Success);
 
             // 重置进度
             _targetProgress = 0;
@@ -196,7 +239,16 @@ namespace BlueSapphire.Builder
         private void BtnCopyLog_Click(object sender, RoutedEventArgs e)
         {
             string logText = new System.Windows.Documents.TextRange(TxtLog.Document.ContentStart, TxtLog.Document.ContentEnd).Text;
-            if (!string.IsNullOrWhiteSpace(logText)) Clipboard.SetText(logText);
+            if (string.IsNullOrWhiteSpace(logText)) return;
+            try
+            {
+                Clipboard.SetText(logText);
+            }
+            catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or System.Runtime.InteropServices.ExternalException)
+            {
+                // 远程会话中剪贴板常被其他进程短暂占用，复制失败不应崩溃
+                MessageBox.Show("复制失败：剪贴板暂被其他进程占用，请稍后重试。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private void BtnClearLog_Click(object sender, RoutedEventArgs e)
@@ -251,13 +303,17 @@ namespace BlueSapphire.Builder
 
             if (isCsproj)
             {
-                _viewModel.RawOutputDir = Path.Combine(projDir, "bin", "Publish");
-                _viewModel.SetupOutputDir = Path.Combine(projDir, "bin", "Installer");
+                // 仅在用户尚未手动设置时才填默认值，避免覆盖用户自定义的「编译产物输出」路径
+                if (string.IsNullOrWhiteSpace(_viewModel.RawOutputDir))
+                    _viewModel.RawOutputDir = Path.Combine(projDir, "bin", "Publish");
+                if (string.IsNullOrWhiteSpace(_viewModel.SetupOutputDir))
+                    _viewModel.SetupOutputDir = Path.Combine(projDir, "bin", "Installer");
             }
             else
             {
                 // Tauri / Node 工程
-                _viewModel.SetupOutputDir = Path.Combine(projDir, "dist", "Installer");
+                if (string.IsNullOrWhiteSpace(_viewModel.SetupOutputDir))
+                    _viewModel.SetupOutputDir = Path.Combine(projDir, "dist", "Installer");
                 if (string.IsNullOrWhiteSpace(_viewModel.WindowsBuildArtifactDir))
                 {
                     _viewModel.WindowsBuildArtifactDir = Path.Combine(projDir, "src-tauri", "target", "release", "bundle");

@@ -17,6 +17,14 @@ namespace BlueSapphire.Builder.Helpers
         /// 转义 ISCC 的 /d 参数值。Inno Setup 预处理器的 define 值若包含空格或特殊字符，
         /// 需用双引号包裹，且内部双引号需用 \" 转义。
         /// </summary>
+        /// <remarks>
+        /// ⚠️ 此方法仅适用于 .iss 文件内的 <c>#define</c> 指令场景。
+        /// 不要用于 ISCC 命令行的 <c>/dName=Value</c> 参数 —— ISCC 命令行解析器
+        /// 会把值里的双引号当作字面字符，导致 <c>MyAppName</c> 变成
+        /// <c>"BlueSapphire"</c>（含引号），进而让 <c>FileExists</c> 拼出
+        /// <c>release\"BlueSapphire".exe</c> 这样的非法路径。
+        /// 命令行 <c>/d</c> 参数请直接传裸值，含空格时由 <c>ProcessStartInfo.ArgumentList</c> 整体加引号。
+        /// </remarks>
         public static string EscapeInnoDefine(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))

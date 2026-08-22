@@ -189,6 +189,18 @@ namespace BlueSapphire.Builder.Services
                 progressReference: FindStageProfile(previousProfile, "windows-publish"));
             stageResults.Add(publishStage);
 
+            // 安全验证：即使 dotnet publish 退出码为 0，也确认 exe 真的生成到了输出目录。
+            // 防止增量编译/文件锁等边缘情况导致 exe 缺失，ISCC 报模糊的 "SourcePath must contain..." 错误。
+            string expectedExeName = $"{config.AppName ?? "BlueSapphire"}.exe";
+            string expectedExePath = Path.Combine(rawOutputDir, expectedExeName);
+            if (!File.Exists(expectedExePath))
+            {
+                throw new FileNotFoundException(
+                    $"dotnet publish 已完成（退出码 0）但输出目录中未找到 {expectedExeName}。" +
+                    $"可能原因：有进程锁定了输出文件，或增量编译异常。" +
+                    $"请关闭正在运行的应用后重试，或先执行 dotnet clean。预期路径：{expectedExePath}");
+            }
+
             SendLog(">>> 编译成功！原始文件已生成。", LogLevel.Success);
 
             if (config.MakeInstaller)
@@ -219,7 +231,8 @@ namespace BlueSapphire.Builder.Services
                     SendLog(">>> 安装包图标已通过正式脚本宏参数接入。", false);
                 }
 
-                // ISCC /d 参数值用 EscapeInnoDefine 包裹双引号，防止含空格或特殊字符导致 ISCC 解析失败
+                // ISCC /d 参数值传裸值：含空格时由 ProcessStartInfo.ArgumentList 整体加引号。
+                // 不要用 EscapeInnoDefine 包裹内层双引号 —— ISCC 命令行会把引号当值的一部分。
                 string safeAppName = config.AppName ?? "App";
                 string safePublisher = config.Publisher ?? "Unknown";
                 string safeAppId = !string.IsNullOrWhiteSpace(config.AppID)
@@ -232,10 +245,15 @@ namespace BlueSapphire.Builder.Services
                     isccArgs.Add($"/dMySetupIconFile={windowsIconPath}");
                 }
                 isccArgs.Add($"/dSourcePath={rawOutputDir}");
-                isccArgs.Add($"/dMyAppName={ArgumentSanitizer.EscapeInnoDefine(safeAppName)}");
-                isccArgs.Add($"/dMyAppVersion={ArgumentSanitizer.EscapeInnoDefine(validatedVersion)}");
-                isccArgs.Add($"/dMyAppPublisher={ArgumentSanitizer.EscapeInnoDefine(safePublisher)}");
-                isccArgs.Add($"/dMyAppId={ArgumentSanitizer.EscapeInnoDefine(safeAppId)}");
+                // 注意：ISCC 的 /d 命令行指令不把双引号当字符串分隔符，而是当作值的一部分。
+                // 因此 /d 参数值必须传裸值，不能像 #define 那样用 "..." 包裹。
+                // 含空格的值由 ProcessStartInfo.ArgumentList 自动整体加引号处理。
+                // 旧实现误用 EscapeInnoDefine（给值加了内层双引号），导致 ISCC 拼出的路径变成
+                // release\"BlueSapphire".exe 而找不到文件，触发 "SourcePath must contain..." 错误。
+                isccArgs.Add($"/dMyAppName={safeAppName}");
+                isccArgs.Add($"/dMyAppVersion={validatedVersion}");
+                isccArgs.Add($"/dMyAppPublisher={safePublisher}");
+                isccArgs.Add($"/dMyAppId={safeAppId}");
                 isccArgs.Add($"/O{setupOutputDir}");
                 isccArgs.Add($"/F{safeAppName}_Setup_v{validatedVersion}");
                 isccArgs.Add(issPath);
